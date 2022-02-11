@@ -14,8 +14,10 @@ from bis import find_business
 # Подобранные константы для поведения карты.
 LAT_STEP = 0.002  # Шаги при движении карты по широте и долготе
 LON_STEP = 0.002
+API_KEY = "40d1649f-0493-4b70-98ba-98533de7710b"
 coord_to_geo_x = 0.0000428  # Пропорции пиксельных и географических координат.
 coord_to_geo_y = 0.0000428
+screen = None
 
 
 def ll(x, y):
@@ -56,7 +58,6 @@ class MapParams(object):
 
     # Обновление параметров карты по нажатой клавише.
     def update(self, event):
-        print(self.lat)
         if event.key == pygame.K_PAGEUP and self.zoom < 19:  # PG_UP
             self.zoom += 1
         elif event.key == pygame.K_PAGEDOWN and self.zoom > 2:  # PG_DOWN
@@ -75,6 +76,14 @@ class MapParams(object):
             self.type = "sat"
         elif event.key == pygame.K_3:  # 3
             self.type = "sat,skl"
+        elif event.key == pygame.K_DELETE:  # DELETE
+            self.search_result = None
+        elif event.key == pygame.K_TAB:  # TAB
+            try:
+                self.lon, self.lat = get_coordinates(input_field())  # Enter
+                self.add_reverse_toponym_search(True, (self.lon, self.lat))
+            except (IndexError, RuntimeError):
+                print('Не правильное название')
 
         if self.lon > 180: self.lon -= 360
         if self.lon < -180: self.lon += 360
@@ -91,9 +100,13 @@ class MapParams(object):
         return lx, ly
 
     # Добавить результат геопоиска на карту.
-    def add_reverse_toponym_search(self, pos):
-        point = self.screen_to_geo(pos)
-        toponym = reverse_geocode(ll(point[0], point[1]))
+    def add_reverse_toponym_search(self, flag_that_there_are_readymade_coordinates, pos):
+        if not flag_that_there_are_readymade_coordinates:
+            point = self.screen_to_geo(pos)
+            toponym = reverse_geocode(ll(point[0], point[1]))
+        else:
+            point = pos
+            toponym = reverse_geocode(ll(pos[0], pos[1]))
         self.search_result = SearchResult(
             point,
             toponym["metaDataProperty"]["GeocoderMetaData"]["text"] if toponym else None,
@@ -135,11 +148,73 @@ def render_text(text):
     return font.render(text, 1, (100, 0, 100))
 
 
+def geocode(address):
+    geocoder_request = f"http://geocode-maps.yandex.ru/1.x/"
+    geocoder_params = {
+        "apikey": API_KEY,
+        "geocode": address,
+        "format": "json"}
+
+    response = requests.get(geocoder_request, params=geocoder_params)
+
+    if response:
+        json_response = response.json()
+    else:
+        raise RuntimeError(
+            f"""Ошибка выполнения запроса:
+            {geocoder_request}
+            Http статус: {response.status_code} ({response.reason})""")
+
+    return json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"] if json_response else None
+
+
+def get_coordinates(address):
+    toponym = geocode(address)
+    if not toponym:
+        return None, None
+    toponym_coordinates = toponym["Point"]["pos"]
+    toponym_longitude, toponym_lattitude = toponym_coordinates.split(" ")
+    return float(toponym_longitude), float(toponym_lattitude)
+
+
+def input_field():
+    global screen
+    font = pygame.font.Font(None, 32)
+    clock = pygame.time.Clock()
+    input_box = pygame.Rect(100, 100, 140, 32)
+    color_active = pygame.Color('Black')
+    color = color_active
+    text = ''
+    run = True
+    while run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:  # Enter
+                    run = False
+                    return text
+                elif event.key == pygame.K_BACKSPACE:  # BACKSPACE
+                    text = text[:-1]
+                elif event.key == pygame.K_ESCAPE:  # ESCAPE
+                    run = False
+                else:
+                    text += event.unicode
+        pygame.draw.rect(screen, pygame.Color('Grey'), input_box)
+        txt_surface = font.render(text, True, color)
+        width = max(200, txt_surface.get_width() + 10)
+        input_box.w = width
+        screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+        pygame.draw.rect(screen, color, input_box, 2)
+        pygame.display.flip()
+        clock.tick(30)
+
+
 def main():
+    global screen
     # Инициализируем pygame
     pygame.init()
     screen = pygame.display.set_mode((600, 450))
-
     # Заводим объект, в котором будем хранить все параметры отрисовки карты.
     mp = MapParams()
     running = True
