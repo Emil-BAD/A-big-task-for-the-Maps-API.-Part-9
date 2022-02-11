@@ -238,11 +238,6 @@ def main():
                 break
             elif event.type == pygame.KEYUP:  # Обрабатываем различные нажатые клавиши.
                 mp.update(event)
-            elif event.type == pygame.MOUSEBUTTONUP:  # Выполняем поиск по клику мышки.
-                if event.button == 1:  # LEFT_MOUSE_BUTTON
-                    mp.add_reverse_toponym_search(False, event.pos)
-                elif event.button == 3:  # RIGHT_MOUSE_BUTTON
-                    mp.add_reverse_org_search(event.pos)
             else:
                 continue
 
