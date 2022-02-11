@@ -257,7 +257,7 @@ def main():
                 text = render_text(mp.search_result.postal_code + ", " + mp.search_result.address)
             else:
                 text = render_text(mp.search_result.address)
-            screen.blit(text, (20, 400))
+            screen.blit(text, (5, 400))
         # Переключаем экран и ждем закрытия окна.
         pygame.display.flip()
 
