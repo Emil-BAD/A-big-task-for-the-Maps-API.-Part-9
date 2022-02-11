@@ -56,7 +56,7 @@ class MapParams(object):
     def ll(self):
         return ll(self.lon, self.lat)
 
-    # Обновление параметров карты по нажатой клавише.
+    # Обновление параметров карты по нажатой клавише
     def update(self, event):
         if event.key == pygame.K_PAGEUP and self.zoom < 19:  # PG_UP
             self.zoom += 1
