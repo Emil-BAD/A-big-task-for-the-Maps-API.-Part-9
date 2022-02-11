@@ -113,6 +113,15 @@ class MapParams(object):
             toponym["metaDataProperty"]["GeocoderMetaData"]["Address"].get(
                 "postal_code") if toponym else None)
 
+    # Добавить результат поиска организации на карту.
+    def add_reverse_org_search(self, pos):
+        self.search_result = None
+        point = self.screen_to_geo(pos)
+        org = find_business(ll(point[0], point[1]))
+        if not org:
+            return
+        org_point = org["geometry"]["coordinates"]
+
 
 # Создание карты с соответствующими параметрами.
 def load_map(mp):
@@ -144,7 +153,8 @@ def load_map(mp):
 
 # Создание холста с текстом.
 def render_text(text):
-    font = pygame.font.Font(None, 30)
+
+    font = pygame.font.Font(None, 23)
     return font.render(text, 1, (100, 0, 100))
 
 
@@ -229,6 +239,8 @@ def main():
             elif event.type == pygame.MOUSEBUTTONUP:  # Выполняем поиск по клику мышки.
                 if event.button == 1:  # LEFT_MOUSE_BUTTON
                     mp.add_reverse_toponym_search(False, event.pos)
+                elif event.button == 3:  # RIGHT_MOUSE_BUTTON
+                    mp.add_reverse_org_search(event.pos)
             else:
                 continue
 
@@ -237,6 +249,9 @@ def main():
 
         # Рисуем картинку, загружаемую из только что созданного файла.
         screen.blit(pygame.image.load(map_file), (0, 0))
+        if mp.search_result:
+            text = render_text(mp.search_result.address)
+            screen.blit(text, (5, 400))
         # Переключаем экран и ждем закрытия окна.
         pygame.display.flip()
 
