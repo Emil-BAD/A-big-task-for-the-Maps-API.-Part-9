@@ -78,6 +78,8 @@ class MapParams(object):
             self.type = "sat,skl"
         elif event.key == pygame.K_DELETE:  # DELETE
             self.search_result = None
+        elif event.key == pygame.K_INSERT:  # INSERT
+            self.use_postal_code = not self.use_postal_code
         elif event.key == pygame.K_TAB:  # TAB
             try:
                 self.lon, self.lat = get_coordinates(input_field())  # Enter
@@ -249,9 +251,13 @@ def main():
 
         # Рисуем картинку, загружаемую из только что созданного файла.
         screen.blit(pygame.image.load(map_file), (0, 0))
+        # Добавляем подписи на экран, если они нужны.
         if mp.search_result:
-            text = render_text(mp.search_result.address)
-            screen.blit(text, (5, 400))
+            if mp.use_postal_code and mp.search_result.postal_code:
+                text = render_text(mp.search_result.postal_code + ", " + mp.search_result.address)
+            else:
+                text = render_text(mp.search_result.address)
+            screen.blit(text, (20, 400))
         # Переключаем экран и ждем закрытия окна.
         pygame.display.flip()
 
